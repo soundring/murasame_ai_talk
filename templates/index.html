@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>音声対話アプリ</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+
+      #start-btn {
+        position: fixed;
+        bottom: 120px;
+        right: 60px;
+        width: 100px;
+        height: 100px;
+        background-color: #fa9e25;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.3s, box-shadow 0.3s;
+      }
+
+      #chat-container {
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        font-family: Arial, sans-serif;
+      }
+      .message {
+        display: flex;
+        margin: 10px 0;
+      }
+
+      .message.user {
+        justify-content: flex-end;
+      }
+
+      .message.ai {
+        justify-content: flex-start;
+      }
+
+      .bubble {
+        max-width: 70%;
+        padding: 10px;
+        border-radius: 10px;
+        margin: 5px;
+      }
+
+      .bubble.user {
+        background-color: #e0f7fa;
+        text-align: right;
+      }
+
+      .bubble.ai {
+        background-color: #f1f1f1;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>音声対話アプリ</h1>
+
+    <button id="start-btn">🎙️開始</button>
+    <label id="status-label"></label>
+    <p id="chat-container"></p>
+
+    <script>
+      class RecognitionManager {
+        constructor(labelElement, chatContainer) {
+          this.label = labelElement;
+          this.chatContainer = chatContainer;
+          // Web Speech APIを使用
+          this.recognition = new (window.SpeechRecognition ||
+            window.webkitSpeechRecognition)();
+          this.recognition.lang = 'ja-JP';
+          this.recognition.continuous = true;
+
+          this.recognition.onstart = () => this.onStart();
+          this.recognition.onend = () => this.onEnd();
+          this.recognition.onresult = (event) => this.onResult(event);
+          this.recognition.onerror = (event) => this.onError(event);
+        }
+
+        start() {
+          this.recognition.start();
+        }
+
+        stop() {
+          this.recognition.stop();
+        }
+
+        onStart() {
+          this.label.innerHTML = '音声認識中...';
+        }
+
+        onEnd() {
+          this.label.innerHTML = '音声認識終了';
+        }
+
+        async onResult(event) {
+          const transcript =
+            event.results[event.results.length - 1][0].transcript;
+
+          if (transcript == '') return;
+
+          this.chatContainer.innerHTML += `<div class="message user"><div class="bubble user">あなた: ${transcript}</div></div>`;
+
+          this.stop();
+
+          const response = await fetch('http://127.0.0.1:5000/chatgpt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: transcript }),
+          });
+          const data = await response.json();
+
+          const gptResponse = data.text;
+          this.chatContainer.innerHTML += `<div class="message ai"><div class="bubble ai">AI: ${gptResponse}</div></div>`;
+
+          const audio = new Audio(`audio/${data.audio_url}`);
+          audio.play();
+
+          audio.onended = async () => {
+            await fetch(`/delete_audio/${data.audio_url}`, {
+              method: 'POST',
+            });
+            this.start();
+          };
+        }
+
+        async onError(event) {
+          console.error('エラーが発生しました', event.error);
+        }
+      }
+
+      const statusLabel = document.getElementById('status-label');
+      const chatContainer = document.getElementById('chat-container');
+      const recognitionManager = new RecognitionManager(
+        statusLabel,
+        chatContainer
+      );
+
+      const startBtn = document.getElementById('start-btn');
+      startBtn.onclick = () => {
+        recognitionManager.start();
+      };
+    </script>
+  </body>
+</html>
