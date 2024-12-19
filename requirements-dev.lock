@@ -17,6 +17,8 @@ anyio==4.7.0
     # via openai
 blinker==1.9.0
     # via flask
+cachetools==5.5.0
+    # via google-auth
 certifi==2024.8.30
     # via httpcore
     # via httpx
@@ -33,6 +35,14 @@ flask==3.1.0
     # via flask-cors
     # via vspe-gpt
 flask-cors==5.0.0
+    # via vspe-gpt
+google-auth==2.37.0
+    # via google-auth-oauthlib
+    # via gspread
+    # via vspe-gpt
+google-auth-oauthlib==1.2.1
+    # via gspread
+gspread==6.1.4
     # via vspe-gpt
 h11==0.14.0
     # via httpcore
@@ -53,8 +63,15 @@ jiter==0.8.2
 markupsafe==3.0.2
     # via jinja2
     # via werkzeug
+oauthlib==3.2.2
+    # via requests-oauthlib
 openai==1.57.2
     # via vspe-gpt
+pyasn1==0.6.1
+    # via pyasn1-modules
+    # via rsa
+pyasn1-modules==0.4.1
+    # via google-auth
 pydantic==2.10.3
     # via openai
 pydantic-core==2.27.1
@@ -62,7 +79,12 @@ pydantic-core==2.27.1
 python-dotenv==1.0.1
     # via vspe-gpt
 requests==2.32.3
+    # via requests-oauthlib
     # via vspe-gpt
+requests-oauthlib==2.0.0
+    # via google-auth-oauthlib
+rsa==4.9
+    # via google-auth
 sniffio==1.3.1
     # via anyio
     # via openai
