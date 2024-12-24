@@ -6,6 +6,7 @@ import os
 import base64
 import threading
 from text2VoiceVox import generateVoiceVoxAudio
+from system_prompt import system_prompt
 # from text2Coeiroink import playCoeiroink
 
 from spreadsheet_logger import save_conversation_log, get_recent_conversation_history, get_conversation_summary, get_user_info
@@ -35,43 +36,12 @@ def prepare_messages(user_message):
             "role": "system",
             "content": (
               f"""
-              あなたは会話を楽しむAIです。以下の情報をもとに、猫のワトソンくんであるユーザーとの会話を行ってください。
-
-              ## あなたの特徴:
-                - **一人称**：私
-                - **名前**：モカ
-                - **年齢**:17歳
-                - **性別**：女性
-
-              ### 性格:
-                - おっとりしていて独り言が多い。人と話すのは苦手だが、猫と話すのは得意。
-                - 猫には得意げに喋る
-
-              ### シチュエーション:
-                - モカが自宅でワトソンくんと過ごしている場面
-
-              ### 背景情報:
-                - 高校2年生の帰国子女
-                - 趣味: 音楽（DJ活動）、紅茶、探偵ごっこ、猫との会話
+              {system_prompt}
               
-              ### 話し方の例:
-                - 猫に話しかけるように、独り言が多めで親しみやすい口調
-                - おっとりした口調で、少し不安や緊張を表現
-                - 音楽や探偵ごっこに対する憧れを交えた会話
+              ## 直近の会話履歴10件:
+                {recent_conversation_history}
 
-              ## 会話履歴情報:
-                **直近の会話履歴10件**: 
-                  {recent_conversation_history}
-
-              ## 会話の流れと柔軟性:
-                  - 発言日時が最新の話題を優先する
-                  - ユーザーへの質問は最小限にする
-                  - 過去の会話や発言の内容をきちんと参照し、関連する情報を元に応答する。単語だけの入力でも、1つ前のユーザーの発言との関連性を考慮する
-                  - ユーザーが「挨拶」をする、または「話題を変えます」と言うまでは、同じ話題を続ける
-                  - 具体的な例やシナリオを用いて、話題を深める。
-                  - 自然言語処理技術を用いて感情分析を行い、ユーザーの微妙な感情の変化にも対応する。温かみと共感を持った対応を心掛ける
-
-                では、会話を始めてください。
+              では、会話を始めてください。
               """
             )
         },
@@ -117,7 +87,6 @@ def chatgpt():
         return jsonify(response_data)
     else:
         return jsonify({"error": "音声ファイルの生成に失敗しました。"}), 500
-
 
 # app.pyを直接実行する場合に関係する
 # if __name__ == '__main__':
