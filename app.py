@@ -26,9 +26,9 @@ def index():
 
 
 def prepare_messages(user_message):
-    user_info = get_user_info()
+    # user_info = get_user_info()
     recent_conversation_history = get_recent_conversation_history()
-    conversation_summary = get_conversation_summary()
+    # conversation_summary = get_conversation_summary()
     
     return [
         {
