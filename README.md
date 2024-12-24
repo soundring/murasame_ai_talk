@@ -1,3 +1,38 @@
-# vspe-gpt
+# AI との音声会話システム
 
-Describe your project here.
+**目的**:会話のログを残し、自分の考え方や興味の傾向を知る
+
+TTS については VoiceVox での動作しか検証してない。
+ローカルでの使用を想定している
+
+## 使用
+
+- 音声認識: Web Speech API
+- 会話要約: ChatGPT
+- 会話生成: ChatGPT
+- ユーザー情報・会話ログの保存場所: Google スプレッドシート
+
+### スプレッドシートの構成
+
+- シート 1: ユーザー情報
+- シート 2:AI のプロフィール情報
+- シート 3:会話履歴
+- シート 4:会話要約
+
+## 使い方
+
+1. .env.example をコピーして .env ファイルを作成し、OpenAI の API キーを入力。
+2. Google Cloud Platform (GCP) で Google Sheets API と Google Drive API を有効にし、サービス アカウント キーをダウンロード。
+3. 2 でダウンロードしたキーを credentials.json という名前でプロジェクトのトップディレクトリに配置する。
+4. VoiceVox を起動
+5. flask サーバーを起動
+6. サーバーにアクセス
+7. 「🎙️ 開始」ボタンを押して会話開始
+
+app.py の 29 行目~31 行目の user_info と conversation_summary の部分については必要ならコメントアウトを外す
+
+## 既知の問題
+
+- Chrome だと一定時間喋らないと音声認識が終了する
+- Safari だと無限に音声認識が続いてくれるが、会話中にマイクが無効化される場合がある(Safari のデベロッパ設定でクロスオリジンの制限を無効にするにチェックを入れて開き直すと治る場合あり)
+- iPhone だと音声再生ができない(Web Speech API との相性問題がありそう)
