@@ -1,5 +1,5 @@
 [project]
-name = "vspe-gpt"
+name = "murasame_ai_talk"
 version = "0.1.0"
 description = "Add your description here"
 authors = [
@@ -29,4 +29,4 @@ dev-dependencies = []
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/vspe_gpt"]
+packages = ["src/murasame_ai_talk"]

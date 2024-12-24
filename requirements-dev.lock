@@ -33,17 +33,17 @@ exceptiongroup==1.2.2
     # via anyio
 flask==3.1.0
     # via flask-cors
-    # via vspe-gpt
+    # via murasame-ai-talk
 flask-cors==5.0.0
-    # via vspe-gpt
+    # via murasame-ai-talk
 google-auth==2.37.0
     # via google-auth-oauthlib
     # via gspread
-    # via vspe-gpt
+    # via murasame-ai-talk
 google-auth-oauthlib==1.2.1
     # via gspread
 gspread==6.1.4
-    # via vspe-gpt
+    # via murasame-ai-talk
 h11==0.14.0
     # via httpcore
 httpcore==1.0.7
@@ -66,7 +66,7 @@ markupsafe==3.0.2
 oauthlib==3.2.2
     # via requests-oauthlib
 openai==1.57.2
-    # via vspe-gpt
+    # via murasame-ai-talk
 pyasn1==0.6.1
     # via pyasn1-modules
     # via rsa
@@ -77,10 +77,10 @@ pydantic==2.10.3
 pydantic-core==2.27.1
     # via pydantic
 python-dotenv==1.0.1
-    # via vspe-gpt
+    # via murasame-ai-talk
 requests==2.32.3
+    # via murasame-ai-talk
     # via requests-oauthlib
-    # via vspe-gpt
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib
 rsa==4.9

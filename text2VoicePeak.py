@@ -15,7 +15,7 @@ def playVoicePeak(script, narrator="Japanese Female 1", happy=50, sad=50, angry=
 
     exepath = "/Applications/voicepeak.app/Contents/MacOS/voicepeak"  # VOICEPEAKのインストールパスを指定
     # wav出力先
-    outdir = "/Users/murasame/ai_talk/vspe_gpt/tmp/"
+    outdir = "一時ファイル保管場所"
     outpath = os.path.join(outdir, "output.wav")
     
     # 出力先ディレクトリが存在しない場合は作成
