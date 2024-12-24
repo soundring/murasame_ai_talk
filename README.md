@@ -21,11 +21,18 @@ TTS については VoiceVox での動作しか検証してない。
 
 ## 使い方
 
+前提:
+
+- Python のバージョン管理ツールは rye を使用
+- flask のインストール
+
+手順:
+
 1. .env.example をコピーして .env ファイルを作成し、OpenAI の API キーを入力。
 2. Google Cloud Platform (GCP) で Google Sheets API と Google Drive API を有効にし、サービス アカウント キーをダウンロード。
 3. 2 でダウンロードしたキーを credentials.json という名前でプロジェクトのトップディレクトリに配置する。
 4. VoiceVox を起動
-5. flask サーバーを起動
+5. flask サーバーを起動(インストール必要なライブラリあれば表示される)
 6. サーバーにアクセス
 7. 「🎙️ 開始」ボタンを押して会話開始
 
