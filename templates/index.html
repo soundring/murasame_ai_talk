@@ -115,25 +115,29 @@
 
           this.stop();
 
-          const response = await fetch('http://127.0.0.1:5000/chatgpt', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: transcript }),
-          });
-          const data = await response.json();
-
-          const gptResponse = data.text;
-          this.chatContainer.innerHTML += `<div class="message ai"><div class="bubble ai">AI: ${gptResponse}</div></div>`;
-
-          const audio = new Audio(`audio/${data.audio_url}`);
-          audio.play();
-
-          audio.onended = async () => {
-            await fetch(`/delete_audio/${data.audio_url}`, {
+          try {
+            const response = await fetch('http://127.0.0.1:5001/chatgpt', {
               method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: transcript }),
             });
-            this.start();
-          };
+            const data = await response.json();
+            const audioBlob = await (
+              await fetch(`data:audio/wav;base64,${data.audio}`)
+            ).blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+
+            const aiText = data.text;
+            this.chatContainer.innerHTML += `<div class="message ai"><div class="bubble ai">AI: ${aiText}</div></div>`;
+
+            audio.onended = () => {
+              this.start();
+            };
+          } catch (error) {
+            console.error('エラーが発生しました', error);
+          }
         }
 
         async onError(event) {

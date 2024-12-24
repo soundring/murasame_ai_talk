@@ -1,9 +1,9 @@
-from flask import Flask, request, jsonify, render_template, send_file
+from flask import Flask, request, jsonify, render_template, send_file, Response
 from flask_cors import CORS
 import openai
 from dotenv import load_dotenv
 import os
-import tempfile
+import base64
 import threading
 from text2VoiceVox import generateVoiceVoxAudio
 # from text2Coeiroink import playCoeiroink
@@ -101,37 +101,22 @@ def chatgpt():
     
     ai_answer_text = generate_response_from_chatgpt(user_message)
     
-    audio_filename = generateVoiceVoxAudio(ai_answer_text)
-    if audio_filename:
+    audio_data = generateVoiceVoxAudio(ai_answer_text)  
+    if audio_data:
         # 会話履歴の保存を別スレッドで保存
         threading.Thread(target=save_conversation_log, args=(user_message, ai_answer_text)).start()
 
-        return jsonify({"audio_url": audio_filename, "text": ai_answer_text})
+        # 音声データをBase64エンコード
+        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+
+        response_data = {
+            'text': ai_answer_text,
+            'audio': audio_base64
+        }
+
+        return jsonify(response_data)
     else:
         return jsonify({"error": "音声ファイルの生成に失敗しました。"}), 500
-
-# 音声ファイルを取得するエンドポイント
-@app.route('/audio/<filename>', methods=['GET'])
-def get_audio(filename):
-    file_path = os.path.join(tempfile.gettempdir(), filename)
-    if os.path.exists(file_path):
-        return send_file(file_path)
-    else:
-        return jsonify({"error": "File not found"}), 404
-    
-
-# 音声ファイルを削除するエンドポイント
-@app.route('/delete_audio/<filename>', methods=['POST'])
-def delete_audio(filename):
-    file_path = os.path.join(tempfile.gettempdir(), filename)
-    try:
-        os.remove(file_path)
-        print(f"音声ファイル {file_path} が削除されました。")
-        return jsonify({"status": "File deleted"}), 200
-    except FileNotFoundError:
-        return jsonify({"error": "File not found"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 # app.pyを直接実行する場合に関係する
