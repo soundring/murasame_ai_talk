@@ -14,35 +14,47 @@ conversation_history_sheet = spreadsheet.get_worksheet(2)
 conversation_summary_sheet = spreadsheet.get_worksheet(3)
 
 # 会話履歴の保存
-def save_conversation_log(user_message, ai_response):
+def save_conversation_log(user_message, ai_response_json):
     timestamp = datetime.now().isoformat()
+    ai_message = ai_response_json["ai_message"]
+    topic = ai_response_json["topic"]
+    importance = ai_response_json["importance"]
+    emotion = ai_response_json["emotion"]
 
-    conversation_history_sheet.append_row([timestamp, user_message, ai_response, "", ""])
+    conversation_history_sheet.append_row([timestamp, user_message, ai_message, topic, importance, emotion])
 
-    create_conversation_summary(user_message)
+    create_conversation_summary(user_message, ai_message)
 
-def create_conversation_summary(user_message):
+def create_conversation_summary(user_message, ai_message):
     messages = [
         {
             "role": "system",
             "content": (
                 """
-                あなたは文章を要約するのが得意なAIです。
-                ユーザーの発言を要約してください
-                
-                ## 要約形式
-                - 「ユーザーは」で始める
-                - 簡潔にまとめる
-                
+                あなたには以下の会話を要約してもらいます。要約は以下の形式で行ってください：
+                1. 文脈（会話の背景と流れ）
+                2. キーポイント（ユーザーの発言の重要なポイントを箇条書き）
+
                 ## 要約しない場合
-                - 単純な挨拶や別れの言葉など、重要でない情報のみの場合は、空文字を出力
+                単純な挨拶や別れの言葉など重要でない情報のみの場合は、「 {} 」とだけ出力してください。
 
-                以下に、ユーザーの発言を提供します。
+                ## 出力形式
+                {
+                  "context": "（ここに会話の文脈を書く）",
+                  "key_points": ["（キーポイントを箇条書き）"],
+                }
                 """
-
             )
         },
-        {"role": "user", "content": user_message},
+        {"role": "user",
+        "content": (
+            f"""
+            ## 会話内容
+                ユーザー: {user_message}
+                AI: {ai_message}
+            """
+          )
+        },
     ]
 
     response = openai.chat.completions.create(
@@ -52,6 +64,9 @@ def create_conversation_summary(user_message):
 
     timestamp = datetime.now().isoformat()
     summary = response.choices[0].message.content
+
+    if summary == '{}':
+        return;
 
     conversation_summary_sheet.append_row([timestamp, summary])
 

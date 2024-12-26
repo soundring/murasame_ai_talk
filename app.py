@@ -8,6 +8,7 @@ import threading
 from text2VoiceVox import generateVoiceVoxAudio
 from system_prompt import system_prompt
 # from text2Coeiroink import playCoeiroink
+import json
 
 from spreadsheet_logger import save_conversation_log, get_recent_conversation_history, get_conversation_summary, get_user_info
 
@@ -40,8 +41,6 @@ def prepare_messages(user_message):
               
               ## 直近の会話履歴10件:
                 {recent_conversation_history}
-
-              では、会話を始めてください。
               """
             )
         },
@@ -54,7 +53,8 @@ def generate_response_from_chatgpt(user_message):
         response = openai.chat.completions.create(
             # model = "gpt-4o-2024-11-20",
             model = "gpt-4o-mini",
-            messages = messages
+            messages = messages,
+            response_format={"type": "json_object"}
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -69,18 +69,19 @@ def chatgpt():
     if not user_message:
         return jsonify({"error": "No text provided"}), 400
     
-    ai_answer_text = generate_response_from_chatgpt(user_message)
-    
-    audio_data = generateVoiceVoxAudio(ai_answer_text)  
+    ai_response = generate_response_from_chatgpt(user_message)
+    ai_response_json = json.loads(ai_response)
+    ai_message = ai_response_json["ai_message"]
+    audio_data = generateVoiceVoxAudio(ai_message)  
     if audio_data:
         # 会話履歴の保存を別スレッドで保存
-        threading.Thread(target=save_conversation_log, args=(user_message, ai_answer_text)).start()
+        threading.Thread(target=save_conversation_log, args=(user_message, ai_response_json)).start()
 
         # 音声データをBase64エンコード
         audio_base64 = base64.b64encode(audio_data).decode('utf-8')
 
         response_data = {
-            'text': ai_answer_text,
+            'text': ai_message,
             'audio': audio_base64
         }
 
