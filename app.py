@@ -90,6 +90,7 @@ def chatgpt():
         return jsonify({"error": "音声ファイルの生成に失敗しました。"}), 500
 
 # app.pyを直接実行する場合に関係する
-# if __name__ == '__main__':
-#     app.debug=True
-#     app.run(debug = True)
+if __name__ == '__main__':
+    app.debug=False
+    ssl_context = ('./localhost+2.pem', './localhost+2-key.pem')
+    app.run(host="0.0.0.0", port=5001, ssl_context=ssl_context)

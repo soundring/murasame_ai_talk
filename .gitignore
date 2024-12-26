@@ -11,4 +11,9 @@ wheels/
 
 .env
 
+# Google Cloud
 credentials.json
+
+# SSl
+localhost+2.pem
+localhost+2-key.pem
