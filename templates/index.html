@@ -121,27 +121,78 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ text: transcript }),
             });
-            const data = await response.json();
-            const audioBlob = await (
-              await fetch(`data:audio/wav;base64,${data.audio}`)
-            ).blob();
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
-            audio.play();
 
-            const aiText = data.text;
-            this.chatContainer.innerHTML += `<div class="message ai"><div class="bubble ai">AI: ${aiText}</div></div>`;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
 
-            audio.onended = () => {
-              this.start();
-            };
+            let buffer = '';
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+
+              try {
+                while (true) {
+                  const endIndex = buffer.indexOf('\n');
+                  if (endIndex === -1) break;
+
+                  const jsonString = buffer.slice(0, endIndex);
+                  buffer = buffer.slice(endIndex + 1);
+
+                  const item = JSON.parse(jsonString);
+
+                  if (item.text && item.audio) {
+                    const audioBlob = await (
+                      await fetch(`data:audio/wav;base64,${item.audio}`)
+                    ).blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    this.playAudio(audioUrl, item.text);
+                  }
+                }
+              } catch (error) {
+                console.error('メッセージのパースに失敗しました:', error);
+              }
+            }
           } catch (error) {
-            console.error('エラーが発生しました', error);
+            console.error('サーバーとの通信でエラーが発生しました:', error);
+          }
+
+          this.start();
+        }
+        onError(event) {
+          console.error('音声認識中にエラーが発生しました:', event.error);
+        }
+
+        // キューの管理
+        audioQueue = [];
+        isPlaying = false;
+
+        async playAudio(audioUrl, text) {
+          this.audioQueue.push({ url: audioUrl, text });
+
+          // 再生中でない場合は再生を開始
+          if (!this.isPlaying) {
+            await this.playNextAudio();
           }
         }
 
-        async onError(event) {
-          console.error('エラーが発生しました', event.error);
+        async playNextAudio() {
+          if (this.audioQueue.length > 0) {
+            const nextAudio = this.audioQueue.shift();
+            this.isPlaying = true;
+
+            const audio = new Audio(nextAudio.url);
+            audio.onended = () => {
+              this.isPlaying = false; // 再生が終了したらフラグをリセット
+              this.playNextAudio();
+            };
+
+            await audio.play();
+            this.chatContainer.innerHTML += `<div class="message ai"><div class="bubble ai">AI: ${nextAudio.text}</div></div>`;
+          }
         }
       }
 
