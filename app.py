@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 import os
 import base64
 import threading
-from text2VoiceVox import generateVoiceVoxAudio
+# from text2VoiceVox import generateVoiceVoxAudio
 from system_prompt import system_prompt
-# from text2Coeiroink import playCoeiroink
+from text2VoicePeak import generateVoicePeakAudio
 import json
 
 from spreadsheet_logger import save_conversation_log, get_recent_conversation_history, get_conversation_summary, get_user_info
@@ -72,7 +72,7 @@ def chatgpt():
     ai_response = generate_response_from_chatgpt(user_message)
     ai_response_json = json.loads(ai_response)
     ai_message = ai_response_json["ai_message"]
-    audio_data = generateVoiceVoxAudio(ai_message)  
+    audio_data = generateVoicePeakAudio(ai_message)  
     if audio_data:
         # 会話履歴の保存を別スレッドで保存
         threading.Thread(target=save_conversation_log, args=(user_message, ai_response_json)).start()
