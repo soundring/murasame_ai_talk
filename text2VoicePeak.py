@@ -1,5 +1,17 @@
 import os
 import subprocess
+import psutil
+import time
+
+# 既存のVOICEPEAKプロセスを終了させる
+def terminate_existing_voicepeak_process():
+    for proc in psutil.process_iter(attrs=['pid', 'name']):
+        if proc.info['name'] == "voicepeak":
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except psutil.TimeoutExpired:
+                proc.kill()
 
 def generateVoicePeakAudio(script, narrator="Miyamai Moca", bosoboso=0, doyaru=100, honwaka=0, angry=0, teary=0):
     """
@@ -18,7 +30,7 @@ def generateVoicePeakAudio(script, narrator="Miyamai Moca", bosoboso=0, doyaru=1
     
     # 出力先ディレクトリが存在しない場合は作成
     if not os.path.exists(outdir):
-        os.makedirs(outdir)
+      os.makedirs(outdir, exist_ok=True)
 
     # 引数を作成 (VOICEPEAK コマンドに渡す引数)
     args = [
@@ -30,9 +42,15 @@ def generateVoicePeakAudio(script, narrator="Miyamai Moca", bosoboso=0, doyaru=1
     ]
     
     # subprocess で VOICEPEAK を実行
-    process = subprocess.Popen(args)
-    process.communicate()  # プロセスが終了するのを待つ
-    
+    try:
+        time.sleep(1) # 念の為1秒待機
+        subprocess.run(args, check=True, timeout=20)
+    except subprocess.TimeoutExpired:
+        print("タイムアウトが発生しました。VOICEPEAKプロセスを終了します。")
+        terminate_existing_voicepeak_process()
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"VOICEPEAKの実行に失敗しました。")
+
     # WAVファイルを読み込んでバイナリデータを返す
     with open(outpath, 'rb') as wav_file:
         audio_data = wav_file.read()

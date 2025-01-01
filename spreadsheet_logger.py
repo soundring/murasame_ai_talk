@@ -31,7 +31,7 @@ def create_conversation_summary(user_message, ai_message):
             "role": "system",
             "content": (
                 """
-                あなたには以下の会話を要約してもらいます。要約は以下の形式で行ってください：
+                あなたには以下の会話内容から要約を作成し、ユーザーの発言のキーポイントを抽出してください。
                 1. 文脈（会話の背景と流れ）
                 2. キーポイント（ユーザーの発言の重要なポイントを箇条書き）
 
@@ -41,7 +41,7 @@ def create_conversation_summary(user_message, ai_message):
                 ## 出力形式
                 {
                   "context": "（ここに会話の文脈を書く）",
-                  "key_points": ["（キーポイントを箇条書き）"],
+                  "key_points": ["（「ユーザーは」で始めるキーポイントを箇条書き）"],
                 }
                 """
             )

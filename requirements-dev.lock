@@ -67,6 +67,8 @@ oauthlib==3.2.2
     # via requests-oauthlib
 openai==1.57.2
     # via murasame-ai-talk
+psutil==6.1.1
+    # via murasame-ai-talk
 pyasn1==0.6.1
     # via pyasn1-modules
     # via rsa
