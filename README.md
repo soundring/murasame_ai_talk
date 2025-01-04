@@ -2,15 +2,15 @@
 
 **目的**:会話のログを残し、自分の考え方や興味の傾向を知る
 
-TTS については VoiceVox での動作しか検証してない。
-ローカルでの使用を想定している
+TTS については Voicepeak の 宮舞モカ での動作を想定
+ローカルでの使用を想定
 
 ## 使用
 
 - 音声認識: Web Speech API
-- 会話要約: ChatGPT
-- 会話生成: ChatGPT
-- ユーザー情報・会話ログの保存場所: Google スプレッドシート
+- 会話要約: DeepSeek V3
+- 会話生成: DeepSeek V3
+- ユーザー情報・会話履歴・会話履歴要約の保存場所: Google スプレッドシート
 
 ### スプレッドシートの構成
 
@@ -28,15 +28,12 @@ TTS については VoiceVox での動作しか検証してない。
 
 手順:
 
-1. .env.example をコピーして .env ファイルを作成し、OpenAI の API キーを入力。
+1. .env.example をコピーして .env ファイルを作成し、DeepSeek の API キーを入力。
 2. Google Cloud Platform (GCP) で Google Sheets API と Google Drive API を有効にし、サービス アカウント キーをダウンロード。
 3. 2 でダウンロードしたキーを credentials.json という名前でプロジェクトのトップディレクトリに配置する。
-4. VoiceVox を起動
-5. flask サーバーを起動(インストール必要なライブラリあれば表示される)
-6. サーバーにアクセス
-7. 「🎙️ 開始」ボタンを押して会話開始
-
-app.py の 29 行目~31 行目の user_info と conversation_summary の部分については必要ならコメントアウトを外す
+4. flask サーバーを起動(インストール必要なライブラリあれば表示される)
+5. PC版Safariでアクセス
+6. 「🎙️ 開始」ボタンを押して会話開始
 
 ## 既知の問題
 
