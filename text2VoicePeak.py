@@ -1,5 +1,22 @@
 import os
 import subprocess
+import psutil
+import time
+
+# 既存のVOICEPEAKプロセスを終了させる
+def terminate_existing_voicepeak_process():
+    for proc in psutil.process_iter(attrs=['pid', 'name']):
+        if proc.info['name'] == "voicepeak":
+            print(f"VOICEPEAKプロセス (PID: {proc.info['pid']}) を終了します。")
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)  # 3秒待機
+            except psutil.TimeoutExpired:
+                print("プロセスが終了しないため、強制終了します。")
+                proc.kill()
+            finally:
+                # プロセスが終了するのを確認
+                proc.wait()
 
 def generateVoicePeakAudio(script, narrator="Miyamai Moca", bosoboso=0, doyaru=100, honwaka=0, angry=0, teary=0):
     """
@@ -18,7 +35,9 @@ def generateVoicePeakAudio(script, narrator="Miyamai Moca", bosoboso=0, doyaru=1
     
     # 出力先ディレクトリが存在しない場合は作成
     if not os.path.exists(outdir):
-        os.makedirs(outdir)
+      os.makedirs(outdir, exist_ok=True)
+
+    terminate_existing_voicepeak_process()
 
     # 引数を作成 (VOICEPEAK コマンドに渡す引数)
     args = [
@@ -30,9 +49,27 @@ def generateVoicePeakAudio(script, narrator="Miyamai Moca", bosoboso=0, doyaru=1
     ]
     
     # subprocess で VOICEPEAK を実行
-    process = subprocess.Popen(args)
-    process.communicate()  # プロセスが終了するのを待つ
-    
+    max_retries=3
+    for attempt in range(max_retries):
+      try:
+          subprocess.run(args, check=True, timeout=20)
+          break
+      except subprocess.TimeoutExpired:
+          print("タイムアウトが発生しました。VOICEPEAKプロセスを終了します。")
+          terminate_existing_voicepeak_process()
+          if attempt < max_retries - 1:
+            print(f"リトライします... (試行回数: {attempt + 1})")
+            time.sleep(1)
+          else:
+            raise RuntimeError("最大リトライ回数に達しました。")
+      except subprocess.CalledProcessError as e:
+            print(f"VOICEPEAKの実行に失敗しました。エラー: {e}")
+            if attempt < max_retries - 1:
+              print(f"リトライします... (試行回数: {attempt + 1})")
+              time.sleep(1)
+            else:
+                raise RuntimeError("最大リトライ回数に達しました。")
+
     # WAVファイルを読み込んでバイナリデータを返す
     with open(outpath, 'rb') as wav_file:
         audio_data = wav_file.read()

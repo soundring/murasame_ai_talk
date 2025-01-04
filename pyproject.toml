@@ -13,6 +13,7 @@ dependencies = [
     "requests>=2.32.3",
     "gspread>=6.1.4",
     "google-auth>=2.37.0",
+    "psutil>=6.1.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"

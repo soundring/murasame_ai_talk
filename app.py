@@ -1,14 +1,15 @@
-from flask import Flask, request, jsonify, render_template, send_file, Response
+from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 from flask_cors import CORS
 import openai
 from dotenv import load_dotenv
 import os
 import base64
 import threading
-# from text2VoiceVox import generateVoiceVoxAudio
 from system_prompt import system_prompt
 from text2VoicePeak import generateVoicePeakAudio
 import json
+import re
+import time
 
 from spreadsheet_logger import save_conversation_log, get_recent_conversation_history, get_conversation_summary, get_user_info
 
@@ -16,6 +17,7 @@ load_dotenv()
 
 # OpenAIのAPIキー設定
 openai.api_key = os.getenv('API_KEY')
+openai.base_url = "https://api.deepseek.com"
 
 app = Flask(__name__)
 
@@ -28,33 +30,39 @@ def index():
 
 
 def prepare_messages(user_message):
-    # user_info = get_user_info()
+    user_info = get_user_info()
     recent_conversation_history = get_recent_conversation_history()
-    # conversation_summary = get_conversation_summary()
+    conversation_summary = get_conversation_summary()
     
     return [
         {
-            "role": "system",
-            "content": (
-              f"""
-              {system_prompt}
-              
-              ## 直近の会話履歴10件:
-                {recent_conversation_history}
-              """
-            )
+          "role": "system",
+          "content": (
+            f"{system_prompt}\n\n"
+            "## ユーザー情報:\n"
+            f"{user_info}\n"
+            f"{conversation_summary}"
+          )
         },
-        {"role": "user", "content": user_message}
+        {
+          "role": "user",
+          "content":(
+            "## 会話履歴:\n"
+            f"{recent_conversation_history}\n\n"
+            "## ユーザーのメッセージ:\n"
+            f"{user_message}"
+          )
+        }
     ]
 
 def generate_response_from_chatgpt(user_message):
     try:
         messages = prepare_messages(user_message)
         response = openai.chat.completions.create(
-            # model = "gpt-4o-2024-11-20",
-            model = "gpt-4o-mini",
+            model = "deepseek-chat",
             messages = messages,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            stream=False
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -67,27 +75,40 @@ def chatgpt():
     user_message = data.get('text')
 
     if not user_message:
-        return jsonify({"error": "No text provided"}), 400
-    
+        return jsonify({"error": "テキストが提供されていません"}), 400
+
     ai_response = generate_response_from_chatgpt(user_message)
     ai_response_json = json.loads(ai_response)
     ai_message = ai_response_json["ai_message"]
-    audio_data = generateVoicePeakAudio(ai_message)  
-    if audio_data:
-        # 会話履歴の保存を別スレッドで保存
-        threading.Thread(target=save_conversation_log, args=(user_message, ai_response_json)).start()
 
-        # 音声データをBase64エンコード
-        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+    # 句読点または行末で区切る
+    pattern = r'(.+?(?:[。．.!?！？\n]|$))'
 
-        response_data = {
-            'text': ai_message,
-            'audio': audio_base64
-        }
+    # 文を分割し、空白や空文字列を除外
+    split_messages = [s.strip() for s in re.findall(pattern, ai_message) if s.strip()]
 
-        return jsonify(response_data)
-    else:
-        return jsonify({"error": "音声ファイルの生成に失敗しました。"}), 500
+    @stream_with_context
+    def generate_audio_stream():
+        for sentence in split_messages:
+            if sentence:
+                audio_data = generateVoicePeakAudio(sentence)
+                if audio_data:
+                    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                    json_response = {
+                        'text': sentence,
+                        'audio': audio_base64
+                    }
+                    yield json.dumps(json_response) + "\n"
+
+                    time.sleep(3) # voicepeakを短時間で連続して実行するとエラーが発生するため、2秒待機
+                else:
+                    raise RuntimeError("音声データの生成に失敗しました。")
+                
+
+    # 会話履歴の保存を別スレッドで保存
+    threading.Thread(target=save_conversation_log, args=(user_message, ai_response_json)).start()
+
+    return Response(generate_audio_stream(), mimetype="application/json")
 
 # app.pyを直接実行する場合に関係する
 if __name__ == '__main__':
