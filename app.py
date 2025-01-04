@@ -17,6 +17,7 @@ load_dotenv()
 
 # OpenAIのAPIキー設定
 openai.api_key = os.getenv('API_KEY')
+openai.base_url = "https://api.deepseek.com"
 
 app = Flask(__name__)
 
@@ -29,33 +30,39 @@ def index():
 
 
 def prepare_messages(user_message):
-    # user_info = get_user_info()
+    user_info = get_user_info()
     recent_conversation_history = get_recent_conversation_history()
-    # conversation_summary = get_conversation_summary()
+    conversation_summary = get_conversation_summary()
     
     return [
         {
-            "role": "system",
-            "content": (
-              f"""
-              {system_prompt}
-              
-              ## 会話履歴:
-                {recent_conversation_history}
-              """
-            )
+          "role": "system",
+          "content": (
+            f"{system_prompt}\n\n"
+            "## ユーザー情報:\n"
+            f"{user_info}\n"
+            f"{conversation_summary}"
+          )
         },
-        {"role": "user", "content": user_message}
+        {
+          "role": "user",
+          "content":(
+            "## 会話履歴:\n"
+            f"{recent_conversation_history}\n\n"
+            "## ユーザーのメッセージ:\n"
+            f"{user_message}"
+          )
+        }
     ]
 
 def generate_response_from_chatgpt(user_message):
     try:
         messages = prepare_messages(user_message)
         response = openai.chat.completions.create(
-            # model = "gpt-4o-2024-11-20",
-            model = "gpt-4o-mini",
+            model = "deepseek-chat",
             messages = messages,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            stream=False
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -93,7 +100,7 @@ def chatgpt():
                     }
                     yield json.dumps(json_response) + "\n"
 
-                    time.sleep(2) # voicepeakを短時間で連続して実行するとエラーが発生するため、2秒待機
+                    time.sleep(3) # voicepeakを短時間で連続して実行するとエラーが発生するため、2秒待機
                 else:
                     raise RuntimeError("音声データの生成に失敗しました。")
                 

@@ -31,34 +31,24 @@ def create_conversation_summary(user_message, ai_message):
             "role": "system",
             "content": (
                 """
-                あなたには以下の会話内容から要約を作成し、ユーザーの発言のキーポイントを抽出してください。
-                1. 文脈（会話の背景と流れ）
-                2. キーポイント（ユーザーの発言の重要なポイントを箇条書き）
+                以下の会話内容から、ユーザーの発言のキーポイントを抽出してください。
 
                 ## 要約しない場合
                 単純な挨拶や別れの言葉など重要でない情報のみの場合は、「 {} 」とだけ出力してください。
 
                 ## 出力形式
                 {
-                  "context": "（ここに会話の文脈を書く）",
                   "key_points": ["（「ユーザーは」で始めるキーポイントを箇条書き）"],
                 }
                 """
             )
         },
-        {"role": "user",
-        "content": (
-            f"""
-            ## 会話内容
-                ユーザー: {user_message}
-                AI: {ai_message}
-            """
-          )
-        },
+        { "role": "user", "content": user_message },
+        { "role": "assistant", "content": ai_message }
     ]
 
     response = openai.chat.completions.create(
-        model = "gpt-4o-mini",
+        model = "deepseek-chat",
         messages = messages
     )
 
@@ -72,53 +62,41 @@ def create_conversation_summary(user_message, ai_message):
 
 # ユーザー情報の取得
 def get_user_info():
-    return user_info_cell_value
+  return user_info_cell_value
 
 # 直近の会話履歴を取得
 def get_recent_conversation_history():
     rows = conversation_history_sheet.get_all_values()
      
     recent_rows = rows[-10:] if len(rows) > 10 else rows[1:]
-
     sorted_rows = sorted(recent_rows, key=lambda row: row[0], reverse=True)
     
-    conversations = ""
+    conversations = []
 
-    conversations += "\n".join([
-        f"""
-          ## 発言日時: {row[0]}
-          - 私の発言: {row[1]}
-          - あなたの返答: {row[2]}
-        """
-        for row in sorted_rows if len(row) >= 1
-    ])
+    for row in sorted_rows:
+        conversations.append({"role": "user", "content": row[1], "timestamp": row[0]})
+        conversations.append({"role": "assistant", "content": row[2], "timestamp": row[0]})
 
-    return conversations
+    return json.dumps(conversations)
 
 # 要約データを取得
 def get_conversation_summary():
-    rows = conversation_summary_sheet.get_all_values()
+  rows = conversation_summary_sheet.get_all_values()
 
-    if len(rows) <= 1:
-      return json.dumps({})
+  if len(rows) <= 1:
+      return json.dumps([])
+      
+  # 昨日以前の行をフィルタリング
+  yesterday = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+  summary_rows = [row for row in rows[1:] if datetime.fromisoformat(row[0]) < yesterday]
 
-    total_rows = len(rows)
-    if total_rows <= 11:
-        # 行数が11以下の場合、ヘッダーを除いたすべての行を使用
-        summary_rows = rows[1:]
-    else:
-        # 直近の10件を除いた要約データを使用
-        summary_rows = rows[1:total_rows-10]
+  # 全てのkey_pointsを繋げる
+  user_conversation_summaries = []
+  for row in summary_rows:
+    summary_json = json.loads(row[1])
+    key_points = summary_json.get("key_points", [])
+      
+    for key_point in key_points:
+      user_conversation_summaries.append({"role": "user", "content": key_point})
 
-    sorted_rows = sorted(summary_rows, key=lambda row: row[0], reverse=True)
-    summary_json = json.dumps([
-        {
-            "timestamp": row[0],
-            "要約": row[1]
-        }
-        for row in sorted_rows
-    ])
-
-    return summary_json
-    
-
+  return json.dumps(user_conversation_summaries)
