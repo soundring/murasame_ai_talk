@@ -1,79 +1,113 @@
 import os
 import subprocess
-import psutil
 import time
+from functools import wraps
+import threading
+import queue
 
-# 既存のVOICEPEAKプロセスを終了させる
-def terminate_existing_voicepeak_process():
-    for proc in psutil.process_iter(attrs=['pid', 'name']):
-        if proc.info['name'] == "voicepeak":
-            print(f"VOICEPEAKプロセス (PID: {proc.info['pid']}) を終了します。")
-            proc.terminate()
-            try:
-                proc.wait(timeout=3)  # 3秒待機
-            except psutil.TimeoutExpired:
-                print("プロセスが終了しないため、強制終了します。")
-                proc.kill()
-            finally:
-                # プロセスが終了するのを確認
-                proc.wait()
+class VoicePeakIOError(Exception):
+    """VOICEPEAK の I/O 関連のエラー"""
+    pass
+
+class VoicePeakRetryError(Exception):
+    """リトライ失敗時のエラー"""
+    pass
+
+def retry_on_error(max_attempts=3, initial_delay=1, backoff_factor=2, max_delay=10):
+    """
+    エラー時にリトライを行うデコレータ
+    
+    Parameters:
+    - max_attempts: 最大試行回数
+    - initial_delay: 初回リトライまでの待機時間（秒）
+    - backoff_factor: 待機時間の増加倍率
+    - max_delay: 最大待機時間（秒）
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_delay
+            last_exception = None
+            
+            for attempt in range(max_attempts):
+                try:
+                    return func(*args, **kwargs)
+                except (VoicePeakIOError, subprocess.TimeoutExpired) as e:
+                    last_exception = e
+                    if attempt < max_attempts - 1:
+                        print(f"試行 {attempt + 1}/{max_attempts} が失敗しました: {str(e)}")
+                        print(f"{delay}秒後にリトライします...")
+                        time.sleep(delay)
+                        delay = min(delay * backoff_factor, max_delay)
+                    continue
+                except Exception as e:
+                    # 想定外のエラーは即座に再送出
+                    raise
+            
+            # 全てのリトライが失敗
+            raise VoicePeakRetryError(f"最大試行回数（{max_attempts}回）を超えました。最後のエラー: {str(last_exception)}")
+        
+        return wrapper
+    return decorator
+
+voicepeak_queue = queue.Queue()
+
+@retry_on_error(max_attempts=3, initial_delay=1, backoff_factor=2)
+def voicepeak_worker():
+    while True:
+        task = voicepeak_queue.get()
+        if task is None:
+            break  # 終了信号
+        script, narrator, bosoboso, doyaru, honwaka, angry, teary, result_queue = task
+        try:
+            outdir = "一時ファイル保管場所"
+            outpath = os.path.join(outdir, f"output_{int(time.time())}_{os.getpid()}.wav")
+            
+            if not os.path.exists(outdir):
+                os.makedirs(outdir, exist_ok=True)
+        
+            args = [
+                "/Applications/voicepeak.app/Contents/MacOS/voicepeak",
+                "-s", script,
+                "-n", narrator,
+                "-o", outpath,
+                "-e", f"bosoboso={bosoboso},doyaru={doyaru},honwaka={honwaka},angry={angry},teary={teary}"
+            ]
+        
+            process = subprocess.Popen(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                start_new_session=True
+            )
+                
+            stdout, stderr = process.communicate(timeout=30)
+                
+            if process.returncode != 0:
+                raise VoicePeakIOError(f"VOICEPEAK実行エラー: {stderr.decode('utf-8', errors='ignore')}")
+                
+            if os.path.exists(outpath):
+                with open(outpath, 'rb') as f:
+                    data = f.read()
+                result_queue.put(data)
+            else:
+                result_queue.put(None)
+        except Exception as e:
+            result_queue.put(e)
+        finally:
+            if os.path.exists(outpath):
+                os.remove(outpath)
+            voicepeak_queue.task_done()
+
+
+worker_thread = threading.Thread(target=voicepeak_worker, daemon=True)
+worker_thread.start()
 
 def generateVoicePeakAudio(script, narrator="Miyamai Moca", bosoboso=0, doyaru=100, honwaka=0, angry=0, teary=0):
-    """
-    任意のテキストをVOICEPEAKのナレーターに読み上げさせる関数（Mac版）
-    script: 読み上げるテキスト（文字列）
-    narrator: ナレーターの名前（文字列）
-    bosoboso: ぼそぼその度合い
-    doyaru: ドヤるの度合い
-    honwaka: ほんわかの度合い
-    angry: 怒りの度合い
-    teary: 泣きの度合い
-    """
-    exepath = "/Applications/voicepeak.app/Contents/MacOS/voicepeak"
-    outdir = "一時ファイル保管場所"
-    outpath = os.path.join(outdir, "output.wav")
-    
-    # 出力先ディレクトリが存在しない場合は作成
-    if not os.path.exists(outdir):
-      os.makedirs(outdir, exist_ok=True)
-
-    terminate_existing_voicepeak_process()
-
-    # 引数を作成 (VOICEPEAK コマンドに渡す引数)
-    args = [
-        exepath,
-        "-s", script,          # 読み上げるスクリプト
-        "-n", narrator,        # ナレーターの名前
-        "-o", outpath,         # 出力先のファイル
-        "-e", f"bosoboso={bosoboso},doyaru={doyaru},honwaka={honwaka},angry={angry},teary={teary}"  # 感情の設定
-    ]
-    
-    # subprocess で VOICEPEAK を実行
-    max_retries=3
-    for attempt in range(max_retries):
-      try:
-          subprocess.run(args, check=True, timeout=20)
-          break
-      except subprocess.TimeoutExpired:
-          print("タイムアウトが発生しました。VOICEPEAKプロセスを終了します。")
-          terminate_existing_voicepeak_process()
-          if attempt < max_retries - 1:
-            print(f"リトライします... (試行回数: {attempt + 1})")
-            time.sleep(1)
-          else:
-            raise RuntimeError("最大リトライ回数に達しました。")
-      except subprocess.CalledProcessError as e:
-            print(f"VOICEPEAKの実行に失敗しました。エラー: {e}")
-            if attempt < max_retries - 1:
-              print(f"リトライします... (試行回数: {attempt + 1})")
-              time.sleep(1)
-            else:
-                raise RuntimeError("最大リトライ回数に達しました。")
-
-    # WAVファイルを読み込んでバイナリデータを返す
-    with open(outpath, 'rb') as wav_file:
-        audio_data = wav_file.read()
-
-    os.remove(outpath)
-
-    return audio_data
+    print('VOICEPEAKで音声合成を開始')
+    result_queue = queue.Queue()
+    voicepeak_queue.put((script, narrator, bosoboso, doyaru, honwaka, angry, teary, result_queue))
+    result = result_queue.get()
+    if isinstance(result, Exception):
+        raise result
+    return result

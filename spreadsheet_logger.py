@@ -68,7 +68,7 @@ def get_user_info():
 def get_recent_conversation_history():
     rows = conversation_history_sheet.get_all_values()
      
-    recent_rows = rows[-10:] if len(rows) > 10 else rows[1:]
+    recent_rows = rows[-5:] if len(rows) > 5 else rows[1:]
     sorted_rows = sorted(recent_rows, key=lambda row: row[0], reverse=True)
     
     conversations = []
@@ -93,10 +93,12 @@ def get_conversation_summary():
   # 全てのkey_pointsを繋げる
   user_conversation_summaries = []
   for row in summary_rows:
+    datetime_str = row[0]
+    date_only = datetime_str.split("T")[0]
     summary_json = json.loads(row[1])
     key_points = summary_json.get("key_points", [])
       
     for key_point in key_points:
-      user_conversation_summaries.append({"role": "user", "content": key_point})
+      user_conversation_summaries.append({"role": "user", "content": key_point, "date": date_only})
 
   return json.dumps(user_conversation_summaries)

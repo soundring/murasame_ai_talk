@@ -1,6 +1,7 @@
 import requests
 
-def generateVoiceVoxAudio(text, speaker=14):
+def generateVoiceVoxAudio(text, speaker=61):
+    print('VoiceVoxで音声合成を開始')
     # 1. テキストから音声合成のためのクエリを作成
     params = {'text': text, 'speaker': speaker}
     query_response = requests.post(f'http://127.0.0.1:50021/audio_query', params=params)
