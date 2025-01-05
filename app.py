@@ -7,6 +7,7 @@ import base64
 import threading
 from system_prompt import system_prompt
 from text2VoicePeak import generateVoicePeakAudio
+from text2VoiceVox import generateVoiceVoxAudio
 import json
 import re
 import time
@@ -15,7 +16,7 @@ from spreadsheet_logger import save_conversation_log, get_recent_conversation_hi
 
 load_dotenv()
 
-# OpenAIのAPIキー設定
+# baseurlとAPIキー設定
 openai.api_key = os.getenv('API_KEY')
 openai.base_url = "https://api.deepseek.com"
 
@@ -41,13 +42,14 @@ def prepare_messages(user_message):
             f"{system_prompt}\n\n"
             "## ユーザー情報:\n"
             f"{user_info}\n"
+            "## 過去の会話でのユーザーの発言の要約:\n"
             f"{conversation_summary}"
           )
         },
         {
           "role": "user",
           "content":(
-            "## 会話履歴:\n"
+            "## 会話履歴(文脈理解にのみ使用すること):\n"
             f"{recent_conversation_history}\n\n"
             "## ユーザーのメッセージ:\n"
             f"{user_message}"
@@ -73,6 +75,7 @@ def generate_response_from_chatgpt(user_message):
 def chatgpt():
     data = request.get_json()
     user_message = data.get('text')
+    speechSynthesisType = data.get('speechSynthesisType')
 
     if not user_message:
         return jsonify({"error": "テキストが提供されていません"}), 400
@@ -87,11 +90,18 @@ def chatgpt():
     # 文を分割し、空白や空文字列を除外
     split_messages = [s.strip() for s in re.findall(pattern, ai_message) if s.strip()]
 
+    # 短時間の音声合成アプリの呼び出しを減らすために２センテンスごとに
+    pair_messages = [''.join(split_messages[i:i+2]) for i in range(0, len(split_messages), 2)]
+
     @stream_with_context
     def generate_audio_stream():
-        for sentence in split_messages:
+        for sentence in pair_messages:
             if sentence:
-                audio_data = generateVoicePeakAudio(sentence)
+                audio_data = (
+                    generateVoicePeakAudio(sentence) if speechSynthesisType == 'VoicePeak' 
+                    else generateVoiceVoxAudio(sentence) if speechSynthesisType == 'VoiceVox' 
+                    else None
+                )
                 if audio_data:
                     audio_base64 = base64.b64encode(audio_data).decode('utf-8')
                     json_response = {
@@ -99,8 +109,9 @@ def chatgpt():
                         'audio': audio_base64
                     }
                     yield json.dumps(json_response) + "\n"
-
-                    time.sleep(3) # voicepeakを短時間で連続して実行するとエラーが発生するため、2秒待機
+                    
+                    # voicepeakを短時間で連続して実行するとエラーが発生するため、2秒待機
+                    time.sleep(5) if speechSynthesisType == 'VoicePeak' else None
                 else:
                     raise RuntimeError("音声データの生成に失敗しました。")
                 

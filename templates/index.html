@@ -70,6 +70,20 @@
 
     <button id="start-btn">🎙️開始</button>
     <label id="status-label"></label>
+
+    <h2>音声合成エンジンを選択</h2>
+
+    <form id="synthesisForm">
+      <label>
+        <input type="radio" name="voiceEngine" value="VoiceVox" checked />
+        VoiceVox
+      </label>
+      <br />
+      <label>
+        <input type="radio" name="voiceEngine" value="VoicePeak" /> VoicePeak
+      </label>
+    </form>
+
     <p id="chat-container"></p>
 
     <script>
@@ -106,6 +120,10 @@
         }
 
         async onResult(event) {
+          const selectedRadio = document.querySelector(
+            'input[name="voiceEngine"]:checked'
+          );
+          const speechSynthesisType = selectedRadio.value;
           const transcript =
             event.results[event.results.length - 1][0].transcript;
 
@@ -119,7 +137,7 @@
             const response = await fetch('https://127.0.0.1:5001/chatgpt', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text: transcript }),
+              body: JSON.stringify({ text: transcript, speechSynthesisType }),
             });
 
             const reader = response.body.getReader();
