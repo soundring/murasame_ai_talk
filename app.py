@@ -33,7 +33,7 @@ def index():
 def prepare_messages(user_message):
     user_info = get_user_info()
     recent_conversation_history = get_recent_conversation_history()
-    conversation_summary = get_conversation_summary()
+    # conversation_summary = get_conversation_summary()
     
     return [
         {
@@ -42,8 +42,6 @@ def prepare_messages(user_message):
             f"{system_prompt}\n\n"
             "## ユーザー情報:\n"
             f"{user_info}\n"
-            "## 過去の会話でのユーザーの発言の要約:\n"
-            f"{conversation_summary}"
           )
         },
         {
@@ -111,7 +109,7 @@ def chatgpt():
                     yield json.dumps(json_response) + "\n"
                     
                     # voicepeakを短時間で連続して実行するとエラーが発生するため、2秒待機
-                    time.sleep(5) if speechSynthesisType == 'VoicePeak' else None
+                    time.sleep(6) if speechSynthesisType == 'VoicePeak' else None
                 else:
                     raise RuntimeError("音声データの生成に失敗しました。")
                 
