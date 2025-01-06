@@ -16,49 +16,50 @@ conversation_summary_sheet = spreadsheet.get_worksheet(3)
 # 会話履歴の保存
 def save_conversation_log(user_message, ai_response_json):
     timestamp = datetime.now().isoformat()
+    # TODO: 要約作成の方に移動する
     ai_message = ai_response_json["ai_message"]
-    topic = ai_response_json["topic"]
+    category = ai_response_json["category"]
+    sub_category = ai_response_json["sub_category"]
     importance = ai_response_json["importance"]
     emotion = ai_response_json["emotion"]
 
-    conversation_history_sheet.append_row([timestamp, user_message, ai_message, topic, importance, emotion])
+    conversation_history_sheet.append_row([timestamp, user_message, ai_message, category, importance, emotion])
 
-    create_conversation_summary(user_message, ai_message)
+    create_conversation_summary(user_message, category, sub_category, importance, emotion, timestamp)
 
-def create_conversation_summary(user_message, ai_message):
+def create_conversation_summary(user_message, category, sub_category, importance, emotion, timestamp):
     messages = [
         {
             "role": "system",
             "content": (
                 """
                 以下の会話内容から、ユーザーの発言のキーポイントを抽出してください。
+                キーポイントは複数あってもいいです。
 
-                ## 要約しない場合
-                単純な挨拶や別れの言葉など重要でない情報のみの場合は、「 {} 」とだけ出力してください。
+                ## キーポイントを抽出しない場合
+                単純な挨拶や別れの言葉などの場合は、空文字を出力してください。
+                パーソナルデータの構築に重要でない情報の場合も、空文字を出力してください。
 
                 ## 出力形式
-                {
-                  "key_points": ["（「ユーザーは」で始めるキーポイントを箇条書き）"],
-                }
+                「ユーザーは」で始まる文字列
                 """
             )
         },
         { "role": "user", "content": user_message },
-        { "role": "assistant", "content": ai_message }
     ]
 
     response = openai.chat.completions.create(
         model = "deepseek-chat",
-        messages = messages
+        messages = messages,
+        response_format={"type": "text"},
     )
 
-    timestamp = datetime.now().isoformat()
-    summary = response.choices[0].message.content
+    key_point = response.choices[0].message.content
 
-    if summary == '{}':
+    if key_point == '':
         return;
 
-    conversation_summary_sheet.append_row([timestamp, summary])
+    conversation_summary_sheet.append_row([category, sub_category, key_point, importance, emotion, timestamp])
 
 # ユーザー情報の取得
 def get_user_info():
@@ -80,6 +81,7 @@ def get_recent_conversation_history():
     return json.dumps(conversations)
 
 # 要約データを取得
+# TODO: 発言にマッチするカテゴリの要約データを取得するように変更
 def get_conversation_summary():
   rows = conversation_summary_sheet.get_all_values()
 
@@ -90,15 +92,13 @@ def get_conversation_summary():
   yesterday = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
   summary_rows = [row for row in rows[1:] if datetime.fromisoformat(row[0]) < yesterday]
 
-  # 全てのkey_pointsを繋げる
   user_conversation_summaries = []
   for row in summary_rows:
-    datetime_str = row[0]
+    key_point = row[2]
+
+    datetime_str = row[5]
     date_only = datetime_str.split("T")[0]
-    summary_json = json.loads(row[1])
-    key_points = summary_json.get("key_points", [])
       
-    for key_point in key_points:
-      user_conversation_summaries.append({"role": "user", "content": key_point, "date": date_only})
+    user_conversation_summaries.append({"role": "user", "content": key_point, "date": date_only})
 
   return json.dumps(user_conversation_summaries)
