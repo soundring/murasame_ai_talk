@@ -103,7 +103,7 @@ worker_thread = threading.Thread(target=voicepeak_worker, daemon=True)
 worker_thread.start()
 
 @retry_on_error(max_attempts=3, initial_delay=1, backoff_factor=2)
-def generateVoicePeakAudio(script, narrator="Miyamai Moca", bosoboso=0, doyaru=100, honwaka=0, angry=0, teary=0):
+def generateVoicePeakAudio(script, narrator="Miyamai Moca", bosoboso=0, doyaru=50, honwaka=25, angry=0, teary=0):
     print('VOICEPEAKで音声合成を開始')
     result_queue = queue.Queue()
     voicepeak_queue.put((script, narrator, bosoboso, doyaru, honwaka, angry, teary, result_queue))
