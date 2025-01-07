@@ -82,23 +82,79 @@ def get_recent_conversation_history():
 
 # 要約データを取得
 # TODO: 発言にマッチするカテゴリの要約データを取得するように変更
-def get_conversation_summary():
+def get_conversation_summary(user_message):
+  response = openai.chat.completions.create(
+      model = "deepseek-chat",
+      messages = [
+      {
+          "role": "system",
+          "content": (
+              """
+              以下の文言から、発言内容のカテゴリ名を選択し、カテゴリ名だけを出力してください。
+
+              ### 現在存在するカテゴリ:
+              - アドバイス
+              - キャリア
+              - クリエイター
+              - ソフトウェアエンジニア
+              - ブログ
+              - 飲み物
+              - 運動
+              - 会話
+              - 確認
+              - 学習
+              - 感情
+              - 技術
+              - 休息
+              - 健康
+              - 購入
+              - 仕事
+              - 時間管理
+              - 自己理解
+              - 自然とアウトドア活動
+              - 質問
+              - 趣味
+              - 食事
+              - 食文化
+              - 食料
+              - 性格
+              - 創作
+              - 天気
+              - 伝統
+              - 読書
+              - 日常生活
+              - 料理
+              - その他
+              """
+          )
+      },
+      { "role": "user", "content": user_message },
+    ],
+      response_format={"type": "text"},
+  )
+
+  target_category = response.choices[0].message.content
+
+  if target_category == '':
+    return json.dumps([])
+
   rows = conversation_summary_sheet.get_all_values()
 
   if len(rows) <= 1:
       return json.dumps([])
-      
-  # 昨日以前の行をフィルタリング
-  yesterday = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-  summary_rows = [row for row in rows[1:] if datetime.fromisoformat(row[0]) < yesterday]
 
-  user_conversation_summaries = []
-  for row in summary_rows:
-    key_point = row[2]
+  target_category_rows = [row for row in rows[1:] if row[0] == target_category]
 
-    datetime_str = row[5]
-    date_only = datetime_str.split("T")[0]
-      
-    user_conversation_summaries.append({"role": "user", "content": key_point, "date": date_only})
+  if not target_category_rows:
+      return json.dumps([])
+
+  user_conversation_summaries = [
+    {
+        "role": "user",
+        "content": row[2],
+        "dateTime": row[5]
+    }
+    for row in target_category_rows
+  ]
 
   return json.dumps(user_conversation_summaries)

@@ -33,8 +33,8 @@ def index():
 def prepare_messages(user_message):
     user_info = get_user_info()
     recent_conversation_history = get_recent_conversation_history()
-    # conversation_summary = get_conversation_summary()
-    
+    conversation_summary = get_conversation_summary(user_message)
+    print(conversation_summary)
     return [
         {
           "role": "system",
@@ -47,6 +47,8 @@ def prepare_messages(user_message):
         {
           "role": "user",
           "content":(
+            "## 過去のユーザーの発言から抽出されたキーポイント:\n"
+            f"{conversation_summary}\n\n"
             "## 会話履歴(文脈理解にのみ使用すること):\n"
             f"{recent_conversation_history}\n\n"
             "## ユーザーのメッセージ:\n"
