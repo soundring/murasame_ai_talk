@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 from models.conversation import Conversation
 from models.openai_client import OpenAIClient
 from models.voice_synthesizer import VoiceSynthesizer
-from system_prompt import system_prompt
+from system_prompt import system_instructions_prompt, speech_analysis_prompt, character_settings_prompt
 
 class ChatService:
     def __init__(self, openai_client: OpenAIClient, voice_synthesizer: VoiceSynthesizer, conversation: Conversation):
@@ -19,7 +19,9 @@ class ChatService:
             {
                 "role": "system",
                 "content": (
-                    f"{system_prompt}\n\n"
+                    f"{system_instructions_prompt}\n\n"
+                    f"{speech_analysis_prompt}\n\n"
+                    f"{character_settings_prompt}\n\n"
                     "## 現在存在するカテゴリー:\n"
                     "この中に当てはまらない場合は、新しいカテゴリを自由に追加してください。\n"
                     f"{','.join(self.conversation.processor.categories)}\n\n"
@@ -30,9 +32,9 @@ class ChatService:
             {
                 "role": "user",
                 "content": (
-                    "## 過去の会話のキーポイント:\n"
+                    "## 過去の会話の要約:\n"
                     f"{summary}\n\n"
-                    "## 会話履歴(文脈理解にのみ使用すること):\n"
+                    "## 会話履歴:\n"
                     f"{recent_history}\n\n"
                     "## ユーザーのメッセージ:\n"
                     f"{user_message}"
