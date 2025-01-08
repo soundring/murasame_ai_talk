@@ -42,13 +42,14 @@ class ConversationDataProcessor:
         response = self.ai_client.generate_response(messages)
         conversation_summary_json = json.loads(response)
 
-        if not conversation_summary_json.get("key_point"):
+        if not conversation_summary_json.get("user_key_point"):
             return
             
         summary_data = [
             ai_response["category"],
             ai_response["sub_category"],
-            conversation_summary_json["key_point"],
+            conversation_summary_json["user_key_point"],
+            conversation_summary_json["ai_key_point"],
             ai_response["importance"],
             ai_response["emotion"],
             timestamp
@@ -120,10 +121,11 @@ class ConversationDataProcessor:
                 "role": "user",
                 "category": row[0],
                 "sub_category": row[1],
-                "content": row[2],
-                "importance": row[3],
-                "emotion": row[4],
-                "timestamp": row[5]
+                "user_key_point": row[2],
+                "ai_key_point": row[3] if row[3] else "",
+                "importance": row[4],
+                "emotion": row[5],
+                "timestamp": row[6]
             }
             for row in target_category_rows
         ]

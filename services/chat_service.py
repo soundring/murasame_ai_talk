@@ -30,7 +30,7 @@ class ChatService:
             {
                 "role": "user",
                 "content": (
-                    "## 過去のユーザーの発言から抽出されたキーポイント:\n"
+                    "## 過去の会話のキーポイント:\n"
                     f"{summary}\n\n"
                     "## 会話履歴(文脈理解にのみ使用すること):\n"
                     f"{recent_history}\n\n"
