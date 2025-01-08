@@ -2,7 +2,7 @@ from typing import List, Dict, Any
 from models.conversation import Conversation
 from models.openai_client import OpenAIClient
 from models.voice_synthesizer import VoiceSynthesizer
-from system_prompt import system_prompt, category_list
+from system_prompt import system_prompt
 
 class ChatService:
     def __init__(self, openai_client: OpenAIClient, voice_synthesizer: VoiceSynthesizer, conversation: Conversation):
@@ -22,7 +22,7 @@ class ChatService:
                     f"{system_prompt}\n\n"
                     "## 現在存在するカテゴリー:\n"
                     "この中に当てはまらない場合は、新しいカテゴリを自由に追加してください。\n"
-                    f"{category_list}\n\n"
+                    f"{','.join(self.conversation.processor.categories)}\n\n"
                     "## ユーザー情報:\n"
                     f"{user_info['user_info']}\n"
                 )

@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from .google_sheets import GoogleSheetsClient
 from .openai_client import IAIClient
-from system_prompt import conversation_summary_prompt, category_list
+from system_prompt import conversation_summary_prompt
 
 class ConversationDataProcessor:
     def __init__(self, sheets_client: GoogleSheetsClient, ai_client: IAIClient):
@@ -12,8 +12,12 @@ class ConversationDataProcessor:
         
         # ワークシートのインデックスを定義
         self.USER_INFO_WORKSHEET = 0
+        self.CATEGORY_LIST_WORKSHEET = 1
         self.CONVERSATION_HISTORY_WORKSHEET = 2
         self.CONVERSATION_SUMMARY_WORKSHEET = 3
+        
+        # カテゴリ一覧を初期化
+        self._initialize_categories()
         
     def save_conversation_log(self, user_message: str, ai_response: Dict[str, Any]):
         timestamp = datetime.now().isoformat()
@@ -78,9 +82,21 @@ class ConversationDataProcessor:
             
         return json.dumps(conversations)
         
+    def _initialize_categories(self):
+        """スプレッドシートからカテゴリ一覧を取得して初期化"""
+        try:
+            rows = self.sheets_client.get_all_values(self.CATEGORY_LIST_WORKSHEET)
+            if rows:
+                self.categories = [row[0] for row in rows[1:]]  # ヘッダー行をスキップ
+            else:
+                self.categories = []
+        except Exception as e:
+            print(f"カテゴリ一覧の初期化に失敗しました: {e}")
+            self.categories = []
+
     def get_conversation_summary(self, user_message: str) -> str:
         messages = [
-            {"role": "system", "content": f"適切なカテゴリを選択してください{category_list}" },
+            {"role": "system", "content": f"適切なカテゴリを選択してください\n{','.join(self.categories)}"},
             {"role": "user", "content": user_message},
         ]
         
